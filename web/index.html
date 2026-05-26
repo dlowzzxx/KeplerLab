@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeplerLab | PINN Failure Analysis</title>
+    <meta name="description" content="A failure-analysis lab for a Physics-Informed Neural Network trained on spacecraft orbital dynamics.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="boot-overlay" class="boot-overlay">
+        <div class="boot-container">
+            <div class="boot-logo">KEPLERLAB</div>
+            <div class="boot-subtitle">PINN failure analysis sequence</div>
+            <div id="boot-log" class="boot-log"></div>
+            <div id="boot-progress" class="boot-progress">
+                <div id="boot-progress-bar" class="boot-progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app" class="app hidden">
+        <header class="topbar">
+            <div class="brand">
+                <div class="eyebrow">Case File / Orbital PINN</div>
+                <h1>KeplerLab</h1>
+            </div>
+            <nav class="mode-tabs" aria-label="Views">
+                <button class="mode-tab active" data-view="failure-lab">Failure Lab</button>
+                <button class="mode-tab" data-view="surrogate-solver">Surrogate Solver</button>
+                <button class="mode-tab" data-view="live-orbit">Live Orbit</button>
+                <button class="mode-tab" data-view="model-card">Model Card</button>
+            </nav>
+            <div class="system-status">
+                <span class="status-dot"></span>
+                <span id="status-text">LOADING</span>
+            </div>
+        </header>
+
+        <div id="model-notice" class="model-notice hidden"></div>
+
+        <main>
+            <section id="view-failure-lab" class="view active">
+                <div class="lab-layout">
+                    <section class="orbit-workbench">
+                        <div class="workbench-header">
+                            <div class="header-content">
+                                <div class="panel-kicker">Evidence Board</div>
+                                <h2 id="board-title">Measured model vs Verlet baseline</h2>
+                            </div>
+                            <div class="trace-chips" aria-label="Trace channels">
+                                <span class="chip chip-pinn">PINN</span>
+                                <span class="chip chip-verlet">VERLET</span>
+                                <span class="chip chip-error">ERROR</span>
+                            </div>
+                            <div class="board-toggles">
+                                <label><input type="checkbox" id="toggle-error" checked> Error vector</label>
+                                <label><input type="checkbox" id="toggle-collocation"> Collocation</label>
+                            </div>
+                        </div>
+                        <div class="canvas-container">
+                            <canvas id="orbit-board" width="1200" height="820"></canvas>
+                        </div>
+                        <div class="provenance-strip">
+                            <span>Trace source:</span>
+                            <span id="provenance-tag" class="provenance-tag">measured_exported_model</span>
+                        </div>
+                    </section>
+
+                    <aside class="autopsy-panel">
+                        <div class="control-row">
+                            <label for="scenario-select">Scenario Target</label>
+                            <select id="scenario-select" class="dense-input">
+                                <option value="circular_leo">Circular LEO</option>
+                                <option value="elliptical">Artemis-style Elliptical</option>
+                                <option value="highly_elliptical">GTO High-E</option>
+                            </select>
+                        </div>
+
+                        <div class="autopsy-header">
+                            <div class="panel-kicker">Incident Timeline</div>
+                            <h2 id="experiment-title">Gradient Shock</h2>
+                            <p id="experiment-headline">Loading experiment...</p>
+                        </div>
+
+                        <div id="autopsy-steps" class="incident-timeline"></div>
+
+                        <div class="scrubber-block">
+                            <div class="scrubber-meta">
+                                <span>Orbit Phase</span>
+                                <span id="scrubber-readout">0.000</span>
+                            </div>
+                            <input id="phase-scrubber" type="range" min="0" max="719" value="0">
+                            <div class="play-row">
+                                <button id="play-toggle" class="btn-primary">Play</button>
+                                <button id="reset-phase" class="btn-secondary">Reset</button>
+                            </div>
+                        </div>
+
+                        <div class="diagnosis-card">
+                            <div class="panel-kicker">Engineering Note</div>
+                            <p id="experiment-lesson"></p>
+                            <div id="source-badge" class="source-badge"></div>
+                        </div>
+                    </aside>
+                </div>
+
+                <section class="diagnostics-strip">
+                    <div class="metric-card">
+                        <span>Position Error</span>
+                        <strong id="metric-position">-- km</strong>
+                    </div>
+                    <div class="metric-card">
+                        <span>Energy Drift</span>
+                        <strong id="metric-energy">-- %</strong>
+                    </div>
+                    <div class="metric-card">
+                        <span>Momentum Drift</span>
+                        <strong id="metric-momentum">-- %</strong>
+                    </div>
+                    <div class="metric-card">
+                        <span>PINN Latency</span>
+                        <strong id="metric-inference">-- ms</strong>
+                    </div>
+                    <div class="metric-card">
+                        <span>Status</span>
+                        <strong id="metric-status">--</strong>
+                    </div>
+                </section>
+
+                <section class="chart-grid">
+                    <div class="chart-panel">
+                        <div class="panel-kicker">Position Error Mag</div>
+                        <canvas id="chart-error" width="640" height="180"></canvas>
+                    </div>
+                    <div class="chart-panel">
+                        <div class="panel-kicker">Energy Invariant</div>
+                        <canvas id="chart-energy" width="640" height="180"></canvas>
+                    </div>
+                    <div class="chart-panel">
+                        <div class="panel-kicker">Momentum Invariant</div>
+                        <canvas id="chart-momentum" width="640" height="180"></canvas>
+                    </div>
+                </section>
+            </section>
+
+            <section id="view-surrogate-solver" class="view">
+                <div class="surrogate-layout">
+                    <section class="orbit-workbench">
+                        <div class="workbench-header">
+                            <div class="header-content">
+                                <div class="panel-kicker">Parametric Solver</div>
+                                <h2 id="surrogate-title">Hybrid Kepler Model</h2>
+                            </div>
+                            <div id="surrogate-bound-badge" class="source-badge">MODEL PENDING</div>
+                        </div>
+                        <div class="canvas-container">
+                            <canvas id="surrogate-board" width="1200" height="760"></canvas>
+                        </div>
+                    </section>
+
+                    <aside class="autopsy-panel surrogate-panel">
+                        <div class="slider-stack">
+                            <label>
+                                <span>Periapsis Altitude</span>
+                                <strong id="surrogate-perigee-readout">400 km</strong>
+                            </label>
+                            <input id="surrogate-perigee" type="range" min="150" max="6000" value="400" step="10">
+
+                            <label>
+                                <span>Apoapsis Altitude</span>
+                                <strong id="surrogate-apogee-readout">400 km</strong>
+                            </label>
+                            <input id="surrogate-apogee" type="range" min="150" max="36000" value="400" step="50">
+                        </div>
+
+                        <div class="diagnosis-card">
+                            <div class="panel-kicker">Geometry</div>
+                            <table class="metrics-table" id="surrogate-geometry-table">
+                                <tr class="metrics-row">
+                                    <td>Eccentricity (e)</td>
+                                    <td><strong id="surrogate-eccentricity">0.000</strong></td>
+                                </tr>
+                                <tr class="metrics-row">
+                                    <td>Domain Status</td>
+                                    <td><strong id="surrogate-domain-value">--</strong></td>
+                                </tr>
+                                <tr class="metrics-row">
+                                    <td>Mean Pos Error</td>
+                                    <td><strong id="surrogate-mean-error">-- km</strong></td>
+                                </tr>
+                                <tr class="metrics-row">
+                                    <td>Max Pos Error</td>
+                                    <td><strong id="surrogate-max-error">-- km</strong></td>
+                                </tr>
+                            </table>
+                            <p id="surrogate-status-copy" class="quality-copy">Waiting for parametric export...</p>
+                        </div>
+
+                        <div class="latency-panel">
+                            <div class="latency-header">
+                                <div class="panel-kicker">Hardware Benchmark</div>
+                                <button id="run-latency" class="btn-primary">Run Profile</button>
+                            </div>
+                            <p class="quality-copy">Simulating 600 sequential inferences in the browser V8 runtime.</p>
+                            <div class="latency-grid">
+                                <div>
+                                    <span>PINN Median (p50)</span>
+                                    <strong id="latency-p50">-- ms</strong>
+                                </div>
+                                <div>
+                                    <span>PINN p95</span>
+                                    <strong id="latency-p95">-- ms</strong>
+                                </div>
+                                <div>
+                                    <span>PINN p99 Tail</span>
+                                    <strong id="latency-p99">-- ms</strong>
+                                </div>
+                                <div>
+                                    <span>Jitter p99-p50</span>
+                                    <strong id="latency-jitter">-- ms</strong>
+                                </div>
+                                <div>
+                                    <span>Verlet Baseline</span>
+                                    <strong id="latency-verlet">-- ms</strong>
+                                </div>
+                                <div>
+                                    <span>Execution Ratio</span>
+                                    <strong id="latency-speedup">--</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <section id="view-live-orbit" class="view">
+                <div class="live-layout">
+                    <section class="orbit-workbench">
+                        <div class="workbench-header">
+                            <div class="header-content">
+                                <div class="panel-kicker">Real-time inference</div>
+                                <h2 id="live-title">Loading live model...</h2>
+                            </div>
+                            <div id="live-speedup" class="source-badge">Speedup: --</div>
+                        </div>
+                        <div class="canvas-container">
+                            <canvas id="live-board" width="1200" height="760"></canvas>
+                        </div>
+                    </section>
+
+                    <aside class="text-panel live-summary">
+                        <div class="panel-kicker">Interactive Model</div>
+                        <p>This view runs continuous forward inference in a <code>requestAnimationFrame</code> loop without a pre-calculated trace array.</p>
+                        <p>The network takes normalized time from <code>performance.now()</code>, embeds it with Fourier features, and evaluates the 4x64 MLP in browser JavaScript.</p>
+
+                        <div class="live-grid">
+                            <div>
+                                <span>Scenario</span>
+                                <strong id="live-scenario">--</strong>
+                            </div>
+                            <div>
+                                <span>Params</span>
+                                <strong id="live-params">--</strong>
+                            </div>
+                            <div>
+                                <span>Export</span>
+                                <strong>JSON weights</strong>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <section id="view-model-card" class="view">
+                <div class="model-card-layout">
+                    <div class="text-panel">
+                        <div class="panel-kicker">Architecture Document</div>
+                        <h2>KeplerLab PINN V1</h2>
+
+                        <h3>1. Formulation</h3>
+                        <p>A multi-layer perceptron constrained by normalized Keplerian ODE residuals computed with PyTorch <code>autograd.grad</code>.</p>
+
+                        <h3>2. Inputs & Scaling</h3>
+                        <p>Time <code>t</code> is normalized so <code>2*pi</code> equals one orbital period. Length is scaled to semi-major axis <code>a = 1</code>; velocity is scaled to <code>sqrt(mu/a)</code>, so <code>mu = 1</code>.</p>
+
+                        <h3>3. Network</h3>
+                        <table>
+                            <tr><th>Time Embedding</th><td>Fourier features, 10 integer harmonics</td></tr>
+                            <tr><th>Hidden Layers</th><td>4 layers</td></tr>
+                            <tr><th>Width</th><td>64 neurons</td></tr>
+                            <tr><th>Activation</th><td>Tanh</td></tr>
+                            <tr><th>Total Params</th><td>14,084</td></tr>
+                            <tr><th>Output</th><td><code>[x, y, vx, vy]</code></td></tr>
+                        </table>
+
+                        <h3>4. Physics Residuals</h3>
+                        <p>The network minimizes:</p>
+                        <code>L_phys = || x_ddot + x/r^3 ||^2 + || y_ddot + y/r^3 ||^2</code>
+                    </div>
+
+                    <div class="text-panel">
+                        <div class="panel-kicker">Evaluation</div>
+                        <h2>Validation Metrics</h2>
+                        <div id="model-metrics-table"></div>
+                        <p class="quality-copy model-card-note">The headline PINNs are trained per scenario and measured from exported weights. GTO High-E remains the stress test because periapsis dynamics are stiff.</p>
+
+                        <div class="panel-kicker surrogate-card-kicker">Parametric Surrogate</div>
+                        <div id="surrogate-metrics-table"></div>
+                        <p class="quality-copy model-card-note">The generalized path uses a Kepler-anomaly baseline plus a bounded neural residual. It is reported separately from the single-scenario PINNs.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <span>KeplerLab Aerospace Demo</span>
+            <span>Local Web Deployment</span>
+        </footer>
+    </div>
+
+    <script src="js/boot.js"></script>
+    <script src="js/verlet.js"></script>
+    <script src="js/pinn.js"></script>
+    <script src="js/surrogate.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/metrics.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
