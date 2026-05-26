@@ -1,0 +1,16 @@
+{
+  "name": "keplerlab-web",
+  "version": "1.0.0",
+  "description": "KeplerLab - PINN Failure Analysis Web Interface",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build step required for vanilla HTML project'",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["physics", "pinn", "neural-network", "orbital-mechanics"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
