@@ -1,26 +1,26 @@
 # KeplerLab: PINN Failure Analysis for Orbital Dynamics
 
-KeplerLab is a from-scratch Physics-Informed Neural Network project for planar spacecraft dynamics. The live demo is framed as an engineering failure lab: it shows the model fail, diagnoses why, applies fixes, and proves the final exported model against Velocity Verlet truth with trajectory, invariant, residual, and speed evidence.
+KeplerLab is a Physics-Informed Neural Network project for planar spacecraft dynamics. Its browser demo explores model training, trajectory predictions, and the limits of numerical comparisons.
+
+**[Open the historical demo](https://kepler-lab.vercel.app)** · **[Read the later numerical audit](https://github.com/dlowzzxx/NOETHER/blob/main/PINN-REVIVAL.md#2-planning-audit--legacy-headline-quarantined)**
 
 The goal is not just a pretty orbit. The goal is to make the debugging work legible.
 
 ## What The Demo Shows
 
-- A single orbit board with Verlet truth, PINN prediction, error vectors, periapsis/apoapsis labels, and optional collocation overlays.
+- A single orbit board with a Verlet reference, PINN prediction, error vectors, periapsis/apoapsis labels, and optional collocation overlays.
 - A PINN Autopsy stepper: Gradient Shock, Strict Pretraining, Safe Radius, Periapsis Sampling, Final Model.
 - A diagnostics strip for position error, energy drift, angular momentum drift, inference speed, and status.
 - A Model Card tab describing architecture, loss schedule, normalization, metrics, and limitations.
 - Honest evidence labels: final traces are measured from exported model weights; earlier autopsy stages are diagnostic reconstructions until dedicated ablation weights are trained.
 
-## Current Measured Results
+## Evidence update
 
-| Scenario | Mean position error | Max position error | Energy drift max | Momentum drift max | Browser speedup |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Circular LEO | 0.332 km | 1.005 km | 0.0356% | 0.0178% | 733x |
-| Artemis-style Elliptical | 0.371 km | 1.149 km | 0.0430% | 0.0193% | 790x |
-| GTO High-E | 5.927 km | 42.952 km | 0.6808% | 0.1206% | 365x |
+The original demo's summary figures are historical, not verified error bounds. Its builder copied fixed-model summary values from model metadata rather than recomputing them from the displayed trace, and its finite-step Verlet reference accumulates phase error on high-eccentricity cases.
 
-The high-e orbit is the stress test. After periapsis-focused collocation and a 20,000-epoch run, the final exported model is below 6 km mean position error while the gradient-shock reconstruction is over 23,000 km.
+A later [NOETHER audit](https://github.com/dlowzzxx/NOETHER/blob/main/PINN-REVIVAL.md#2-planning-audit--legacy-headline-quarantined) re-evaluated the same exported high-e weights against analytic Kepler motion. Its [regenerated artifact](https://github.com/dlowzzxx/NOETHER/blob/main/app/public/data/pinn/evidence/fixed-high-e-analytic.v1.json) reports 7.08 km mean and 18.16 km maximum position error over 1,441 samples in one synthetic, fitted orbit. This is not evidence of general orbit prediction or a flight-ready model.
+
+The legacy `e = 0.87` out-of-domain case is quarantined: its nominal periapsis lies about 3,197 km inside Earth, and the coarse reference is about 1,464 km from analytic Kepler at one orbit. Its old model-versus-reference error cannot establish a model failure. The raw historical traces remain available for inspection.
 
 ## Physics
 
@@ -87,7 +87,7 @@ web/data/surrogate.json
 web/data/traces/{scenario}_{experiment}.json
 ```
 
-Each trace includes downsampled time, PINN/reconstruction state, Verlet state, position error, energy drift, momentum drift, residual values, and collocation samples. Final traces are generated from the exported model JSON in `models/`.
+Each trace includes downsampled time, PINN/reconstruction state, Verlet state, position error, energy drift, momentum drift, residual values, and collocation samples. Final traces use exported model JSON in `models/`, but the original summary values and reference have the limitations described above.
 
 Regenerate evidence after exporting models:
 
@@ -99,7 +99,7 @@ node scripts/check_evidence.js
 
 ## Hybrid Surrogate Solver
 
-The `Surrogate Solver` tab is a second path: a parameter-conditioned hybrid model that predicts a continuous family of Keplerian orbits instead of one fixed scenario. It is intentionally separate from the validated Failure Lab.
+The `Surrogate Solver` tab is a second path: a parameter-conditioned hybrid model that predicts a family of Keplerian orbits instead of one fixed scenario. It is separate from the fixed-trajectory Failure Lab.
 
 The first parametric model was a useful failure: a Fourier-only network underfit high-eccentricity motion because periapsis is too sharp in mean-anomaly time. The current v2 model uses the physically natural coordinate:
 
@@ -125,22 +125,13 @@ Model(t_norm, eccentricity, semi_major_axis_feature)
     -> [x, y, vx, vy]
 ```
 
-Current trace-replay validation for the exported surrogate:
-
-| Surrogate case | Domain | Mean position error | Max position error |
-| --- | --- | ---: | ---: |
-| Seen low-e | in-domain | 3.26 km | 7.12 km |
-| Seen mid-e | in-domain | 5.47 km | 16.77 km |
-| Seen high-e | in-domain | 9.10 km | 39.71 km |
-| OOD extreme-e | out-of-domain | 173.01 km | 1462.74 km |
-
-The surrogate is now usable inside the trained eccentricity range, including the high-e validation case. The extreme-e case is deliberately labeled out-of-domain in the UI. The recruiter-facing headline remains the per-scenario Failure Lab model set, because those exported PINNs are the highest-accuracy measured results.
+The legacy browser port omits the final `tanh` in the condition encoder, so its outputs do not exactly match the exported training architecture. Its original trace-replay figures use the coarse reference and should not be taken as validation. The later audit uses corrected inference and an analytic reference; see its [in-domain](https://github.com/dlowzzxx/NOETHER/blob/main/app/public/data/pinn/evidence/hybrid-in-domain-analytic.v1.json) and [physical out-of-domain](https://github.com/dlowzzxx/NOETHER/blob/main/app/public/data/pinn/evidence/hybrid-ood-e085-a45m-analytic.v1.json) artifacts for the stated scenarios and limits.
 
 ## Project Structure
 
 ```text
 PINN/
-  training/         PyTorch PINN, Velocity Verlet truth, losses, export
+  training/         PyTorch PINN, numerical reference, losses, export
   models/           exported JSON weights
   web/              vanilla HTML/CSS/Canvas/JS demo
   web/data/         compact evidence manifest and traces

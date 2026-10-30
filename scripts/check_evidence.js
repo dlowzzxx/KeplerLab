@@ -44,6 +44,8 @@ function ok(message) {
     console.log(`OK   ${message}`);
 }
 
+warn('This checks legacy data consistency, not numerical validity. See the later NOETHER audit linked in README.md.');
+
 function isFinitePoint(point) {
     return (
         Array.isArray(point.gt) &&
@@ -84,9 +86,9 @@ for (const scenario of manifest.scenarios) {
     const baseline = traces.gradient_shock?.metrics?.meanPositionErrorKm;
     const final = traces.final_model?.metrics?.meanPositionErrorKm;
     if (Number.isFinite(baseline) && Number.isFinite(final) && final < baseline) {
-        ok(`${scenario.label}: final improves mean error (${final.toFixed(2)} km vs ${baseline.toFixed(2)} km)`);
+        ok(`${scenario.label}: stored final metric is below the diagnostic reconstruction (${final.toFixed(2)} km vs ${baseline.toFixed(2)} km)`);
     } else {
-        fail(`${scenario.label}: final model does not improve over baseline`);
+        fail(`${scenario.label}: stored final metric is not below the diagnostic reconstruction`);
     }
 
     const threshold = FINAL_THRESHOLDS[scenario.id];
@@ -106,7 +108,7 @@ for (const scenario of manifest.scenarios) {
             fail(`${scenario.label}: momentum drift ${m.momentum_drift_max_pct}% exceeds ${threshold.momentumPct}% gate`);
         }
         if (hardFailures === failuresBeforeThreshold) {
-            ok(`${scenario.label}: final metrics pass quality gates`);
+            ok(`${scenario.label}: stored legacy metrics meet historical thresholds`);
         }
     }
 }
@@ -144,13 +146,13 @@ if (fs.existsSync(surrogatePath)) {
         const highE = traceCases.find((item) => item.id === 'seen_high_e');
         if (highE && highE.position_error_mean_km > 100) {
             if (surrogate.quality?.label === 'research_only') {
-                ok('Surrogate quality gate documents high-e generalization as research-only');
+                ok('Legacy surrogate metadata records the research-only label');
             } else {
                 fail('Parametric surrogate high-e error is high but not labeled research-only');
             }
         } else if (highE && highE.position_error_mean_km <= 100) {
             if (surrogate.quality?.label === 'prototype_generalizer') {
-                ok(`Surrogate high-e gate passes (${highE.position_error_mean_km.toFixed(2)} km mean)`);
+                ok(`Legacy surrogate metadata records its historical high-e threshold (${highE.position_error_mean_km.toFixed(2)} km mean)`);
             } else {
                 fail('Parametric surrogate passes high-e gate but is not labeled prototype_generalizer');
             }
@@ -165,4 +167,4 @@ if (hardFailures > 0) {
     process.exit(1);
 }
 
-console.log(`Evidence check passed with ${warnings} warning(s).`);
+console.log(`Legacy data consistency check passed with ${warnings} warning(s).`);

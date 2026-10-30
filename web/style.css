@@ -270,6 +270,20 @@ footer,
 .system-status.warning { color: var(--warn); }
 .system-status.error { color: var(--error); }
 
+.evidence-notice {
+    padding: 10px 20px;
+    border-bottom: 1px solid #713f12;
+    background: #422006;
+    color: #fde68a;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.evidence-notice a {
+    color: inherit;
+    text-decoration: underline;
+}
+
 .model-notice {
     padding: 8px 20px;
     border-bottom: 1px solid #713f12;

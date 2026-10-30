@@ -41,6 +41,11 @@
             </div>
         </header>
 
+        <aside class="evidence-notice" aria-label="Evidence update">
+            <strong>Evidence update:</strong> This historical demo has known reference and summary-metric errors. Its browser surrogate also differs from the exported training model. The extreme-e case is quarantined.
+            <a href="https://github.com/dlowzzxx/NOETHER/blob/main/PINN-REVIVAL.md#2-planning-audit--legacy-headline-quarantined">Read the numerical audit</a>.
+        </aside>
+
         <div id="model-notice" class="model-notice hidden"></div>
 
         <main>
@@ -305,13 +310,13 @@
 
                     <div class="text-panel">
                         <div class="panel-kicker">Evaluation</div>
-                        <h2>Validation Metrics</h2>
+                        <h2>Historical Metrics</h2>
                         <div id="model-metrics-table"></div>
-                        <p class="quality-copy model-card-note">The headline PINNs are trained per scenario and measured from exported weights. GTO High-E remains the stress test because periapsis dynamics are stiff.</p>
+                        <p class="quality-copy model-card-note">These historical summaries are not recalculated from the displayed traces. See the evidence update above for the later analytic audit.</p>
 
                         <div class="panel-kicker surrogate-card-kicker">Parametric Surrogate</div>
                         <div id="surrogate-metrics-table"></div>
-                        <p class="quality-copy model-card-note">The generalized path uses a Kepler-anomaly baseline plus a bounded neural residual. It is reported separately from the single-scenario PINNs.</p>
+                        <p class="quality-copy model-card-note">The extreme-e orbit crosses Earth and its reference accumulates phase error. The browser port also differs from the exported training architecture; these comparisons are not an accuracy guarantee.</p>
                     </div>
                 </div>
             </section>

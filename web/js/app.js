@@ -219,11 +219,10 @@ class KeplerLabApp {
         if (!this.manifest) return;
         const rows = this.manifest.scenarios.map((scenario) => {
             const m = scenario.modelMetrics;
-            const errorClass = m.position_error_mean_km > 10 ? 'warn' : 'pass';
             return `
-                <div class="metrics-row ${errorClass}">
+                <div class="metrics-row warn">
                     <span>${scenario.label}</span>
-                    <strong>${this._fmt(m.position_error_mean_km, 3)} km mean | ${this._fmt(m.speedup_factor, 0)}x</strong>
+                    <strong>${this._fmt(m.position_error_mean_km, 3)} km mean | ${this._fmt(m.speedup_factor, 0)}x (legacy)</strong>
                 </div>
             `;
         });
@@ -241,8 +240,8 @@ class KeplerLabApp {
         const arch = this.surrogate.model?.data?.architecture || {};
         this.dom.surrogateStatusCopy.textContent = result.modelReady
             ? (arch.output_mode === 'kepler_residual'
-                ? 'The active surrogate solves Kepler anomaly first, then applies a bounded neural residual. The metrics below are measured against fresh Verlet truth.'
-                : 'A legacy parametric export is active. It is preserved as evidence of the earlier high-e generalization failure.')
+                ? 'The legacy browser surrogate applies a neural residual to a Kepler baseline; its comparison uses a finite-step Verlet reference.'
+                : 'A legacy parametric export is active; see the evidence update for evaluation limits.')
             : 'The generalized training/export path is wired. Train parametric_kepler.json to enable green PINN predictions here.';
         this._renderSurrogateModelCard(result.manifest);
         this._updateSurrogateFromControls();
@@ -285,7 +284,7 @@ class KeplerLabApp {
             return {
                 label: 'MODEL PENDING',
                 mode: 'pending',
-                copy: 'No parametric weights are loaded, so the board shows Velocity Verlet truth only.',
+                copy: 'No parametric weights are loaded, so the board shows the numerical Verlet reference only.',
             };
         }
         if (!inDomain) {
@@ -302,31 +301,10 @@ class KeplerLabApp {
                 copy: 'The model loaded, but the live comparison did not produce a finite error metric.',
             };
         }
-        if (metrics.meanPositionErrorKm < 10) {
-            return {
-                label: 'GENERALIZER',
-                mode: 'pass',
-                copy: `This orbit is inside the validated surrogate regime: ${this._fmt(metrics.meanPositionErrorKm, 2)} km mean error against fresh Verlet truth.`,
-            };
-        }
-        if (metrics.meanPositionErrorKm < 75) {
-            return {
-                label: 'USABLE',
-                mode: 'pass',
-                copy: `This orbit is usable but not headline-grade: ${this._fmt(metrics.meanPositionErrorKm, 1)} km mean error against fresh Verlet truth.`,
-            };
-        }
-        if (metrics.meanPositionErrorKm < 250) {
-            return {
-                label: 'PROTOTYPE',
-                mode: 'warn',
-                copy: `This is a prototype regime: ${this._fmt(metrics.meanPositionErrorKm, 0)} km mean error. Useful for showing the interface, not for the headline result.`,
-            };
-        }
         return {
-            label: 'RESEARCH ONLY',
-            mode: 'fail',
-            copy: `This exposes the current generalization failure: ${this._fmt(metrics.meanPositionErrorKm, 0)} km mean error. The validated model for high-e is in Failure Lab.`,
+            label: 'IN TRAINING BOUNDS',
+            mode: 'warn',
+            copy: `${this._fmt(metrics.meanPositionErrorKm, 2)} km mean difference from a finite-step Verlet reference. Training bounds do not guarantee accuracy; see the evidence update.`,
         };
     }
 
@@ -353,14 +331,19 @@ class KeplerLabApp {
             }));
 
         const rows = cases.map((item) => {
+            if (item.id === 'ood_extreme_e') {
+                return `
+                    <div class="metrics-row warn">
+                        <span>${item.label}</span>
+                        <strong>quarantined</strong>
+                    </div>
+                `;
+            }
             const mean = item.position_error_mean_km ?? item.meanPositionErrorKm;
-            let cls = 'fail';
-            if (item.split !== 'out_of_domain' && mean < 10) cls = 'pass';
-            else if (item.split !== 'out_of_domain' && mean < 250) cls = 'warn';
             return `
-                <div class="metrics-row ${cls}">
+                <div class="metrics-row warn">
                     <span>${item.label}</span>
-                    <strong>${this._fmt(mean, 1)} km mean | ${item.split || 'eval'}</strong>
+                    <strong>${this._fmt(mean, 1)} km mean | ${item.split || 'eval'} (legacy)</strong>
                 </div>
             `;
         });
@@ -460,10 +443,6 @@ class KeplerLabApp {
         if (!measured) {
             this._setNotice(
                 'Autopsy stages 01-04 are compact diagnostic reconstructions. The final step is measured from exported model weights.'
-            );
-        } else if (scenario.modelMetrics.position_error_mean_km > 100) {
-            this._setNotice(
-                `${scenario.label} is honest but still rough: ${this._fmt(scenario.modelMetrics.position_error_mean_km, 1)} km mean error. Longer high-e retraining is the next technical target.`
             );
         } else {
             this._setNotice('');

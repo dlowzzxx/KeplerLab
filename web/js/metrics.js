@@ -179,7 +179,7 @@ class MetricsDashboard {
         const energy = 0.5 * (pinnNorm.vx**2 + pinnNorm.vy**2)
                      - 1.0 / Math.sqrt(pinnNorm.x**2 + pinnNorm.y**2 + 1e-6);
         const energyDrift = initialEnergy !== 0
-            0 ((energy - initialEnergy) / Math.abs(initialEnergy)) * 100
+            ? ((energy - initialEnergy) / Math.abs(initialEnergy)) * 100
             : 0;
         this.energyChart.push(energyDrift);
         this.energyEl.textContent = energyDrift.toFixed(4) + ' %';
@@ -187,7 +187,7 @@ class MetricsDashboard {
         // Angular momentum conservation [%]
         const angMom = pinnNorm.x * pinnNorm.vy - pinnNorm.y * pinnNorm.vx;
         const momDrift = initialMomentum !== 0
-            0 ((angMom - initialMomentum) / Math.abs(initialMomentum)) * 100
+            ? ((angMom - initialMomentum) / Math.abs(initialMomentum)) * 100
             : 0;
         this.momentumChart.push(momDrift);
         this.momentumEl.textContent = momDrift.toFixed(4) + ' %';
